@@ -168,7 +168,16 @@
 
 --Part – C: 
 --26. Display cities where number of male employees greater than female employees.
-	PRO
+	SELECT CITY, COUNT(EID) FROM EMPLOYEE
+	GROUP BY CITY
+	HAVING COUNT(
+				CASE 
+					WHEN GENDER='MALE'
+					THEN EID ELSE NULL END)
+					> 
+			COUNT(CASE 
+					WHEN GENDER='FEMALE'
+						THEN EID ELSE NULL END)
 
 --27. Display departments having number of cities greater than 1.
 	SELECT DEPARTMENT,COUNT(CITY)
@@ -193,9 +202,16 @@
 --30. Display departments where total salary of male employees greater than female employees. 
 	SELECT DEPARTMENT,SUM(SALARY)
 	FROM EMPLOYEE
-	WHERE GENDER = 'MALE'
 	GROUP BY DEPARTMENT
-	HAVING SUM(SALARY) > 11000
+	HAVING SUM(
+				CASE 
+					WHEN GENDER='MALE'
+					THEN SALARY ELSE 0 END)
+				>
+			SUM(
+				CASE
+					WHEN GENDER='FEMALE'
+					THEN SALARY ELSE 0 END)
 
 
-	PRO
+	
