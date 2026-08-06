@@ -1,7 +1,6 @@
 --From the table EMPLOYEE perform the following queries:  
 --Part – A: 
 
-Ś
 --1. Create a view Employee_All with all columns. 
 	CREATE VIEW EMPLOYEE_ALL AS
 	SELECT * FROM EMPLOYEE
