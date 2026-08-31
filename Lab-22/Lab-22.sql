@@ -57,40 +57,40 @@ select * from CUSTOMER_ALL;
 
 --3. Display customers whose order amount is greater than category average amount.
 	WITH AMOUNT_AVG AS (
-						SELECT CATEGORY, AVG(AMOUNT) AS AVG_AMOUNT
-						FROM CUSTOMER_ALL
-						GROUP BY CATEGORY )
-
-	SELECT C.*
-	FROM CUSTOMER_ALL C
-	JOIN AMOUNT_AVG A
-	ON C.CATEGORY = A.CATEGORY
-	WHERE C.AMOUNT > A.AVG_AMOUNT;
+					SELECT *, AVG(AMOUNT) OVER (PARTITION BY CATEGORY)AS AVG_AMOUNT
+					FROM CUSTOMER_ALL)
+	SELECT *
+	FROM AMOUNT_AVG
+	WHERE AMOUNT > AVG_AMOUNT;
 
 --4. Display categories having average amount greater than 30000.
 	WITH AMOUNT_AVG AS (
-						SELECT CATEGORY, AVG(AMOUNT) AS AVG_AMOUNT
-						FROM CUSTOMER_ALL
-						GROUP BY CATEGORY )
+					SELECT *, AVG(AMOUNT) OVER (PARTITION BY CATEGORY) AVG_AMOUNT
+					FROM CUSTOMER_ALL
+					)
 
 	SELECT * FROM AMOUNT_AVG 
 	WHERE AVG_AMOUNT > 30000;
 
 --5. Display highest amount order from each category.
 	WITH HIGH_AMOUNT AS (
-						SELECT CATEGORY, MAX(AMOUNT) AS MAX_AMOUNT
-						FROM CUSTOMER_ALL
-						GROUP BY CATEGORY )
+					SELECT *, MAX(AMOUNT) OVER (PARTITION BY CATEGORY) AS MAX_AMOUNT,
+					DENSE_RANK() OVER (PARTITION BY CATEGORY ORDER BY AMOUNT DESC) AS RANK
+					FROM CUSTOMER_ALL
+			 )
 
-	SELECT * FROM HIGH_AMOUNT; 
+	SELECT * FROM HIGH_AMOUNT 
+	WHERE RANK = 1 
 
 --6. Display lowest amount order from each category. 
 	WITH LOW_AMOUNT AS (
-						SELECT CATEGORY, MIN(AMOUNT) AS MIN_AMOUNT
-						FROM CUSTOMER_ALL
-						GROUP BY CATEGORY )
+					SELECT *, MIN(AMOUNT) OVER (PARTITION BY CATEGORY) AS MIN_AMOUNT,
+					DENSE_RANK() OVER (PARTITION BY CATEGORY ORDER BY AMOUNT) AS RANK
+					FROM CUSTOMER_ALL
+			 )
 
-	SELECT * FROM LOW_AMOUNT; 
+	SELECT * FROM LOW_AMOUNT 
+	WHERE RANK = 1
 
 --7. Display categories having more than 3 orders.
 	WITH ORDER_COUNT AS ( SELECT CATEGORY,COUNT(ORDERID) AS COUNT FROM CUSTOMER_ALL
@@ -117,9 +117,9 @@ select * from CUSTOMER_ALL;
 
 --10. Display cumulative order amount in ascending order of amount. 
 	WITH AMOUNT_RANK AS (
-					SELECT * ,
-					RANK() OVER ( ORDER BY AMOUNT ) AS RANK
-					FROM CUSTOMER_ALL )
+				SELECT * ,
+				SUM(AMOUNT) OVER ( ORDER BY AMOUNT ) AS CF
+				FROM CUSTOMER_ALL )
 
 	SELECT * FROM AMOUNT_RANK;
 
@@ -128,13 +128,13 @@ select * from CUSTOMER_ALL;
 --11. Display category-wise top 2 highest amount orders.
 	WITH RANK_AMOUNT AS (
 						SELECT ORDERID,CATEGORY,AMOUNT AS AVG_AMOUNT,
-						RANK() OVER (
+						DENSE_RANK() OVER (
 									PARTITION BY CATEGORY
-									ORDER BY AMOUNT DESC) AS RN
+									ORDER BY AMOUNT DESC) AS DN
 						FROM CUSTOMER_ALL )
 
 	SELECT * FROM RANK_AMOUNT
-	WHERE RN <= 2;
+	WHERE DN <= 2;
 
 --12. Display customers whose amount is closest to category average amount.
 	WITH CLOSET_AMOUNT AS (
@@ -145,9 +145,9 @@ select * from CUSTOMER_ALL;
 	FROM CLOSET_AMOUNT 
 	WHERE DIFF IN 
 	(
-	SELECT MIN(DIFF)
-	FROM CLOSET_AMOUNT
-	GROUP BY CATEGORY
+		SELECT MIN(DIFF)
+		FROM CLOSET_AMOUNT
+		GROUP BY CATEGORY
 	)
 	
 
@@ -165,15 +165,13 @@ select * from CUSTOMER_ALL;
 
 --14. Display customers whose amount is greater than previous customer's amount. 
 	WITH AMOUNT AS (
-					SELECT ORDERID,
-					LAG(AMOUNT) OVER (ORDER BY ORDERID) AS PRE_AMOUNT 
-					FROM CUSTOMER_ALL )
+				SELECT *,
+				LAG(AMOUNT) OVER (ORDER BY ORDERID) AS PRE_AMOUNT 
+				FROM CUSTOMER_ALL )
 
-	SELECT C.* 
-	FROM CUSTOMER_ALL C
-	JOIN AMOUNT A
-	ON A.ORDERID = C.ORDERID
-	WHERE C.AMOUNT > A.PRE_AMOUNT ;
+	SELECT * 
+	FROM  AMOUNT 
+	WHERE AMOUNT > PRE_AMOUNT ;
 
 --15. Display customers whose rank and dense rank are different.
 	WITH RANK AS (
@@ -189,17 +187,15 @@ select * from CUSTOMER_ALL;
 	
 --16. Display orders whose amount is neither highest nor lowest in their category. 
 	WITH AMOUNT AS (
-						SELECT CATEGORY,
-						MAX(AMOUNT) AS MAX,						
-						MIN(AMOUNT) AS MIN
-						FROM CUSTOMER_ALL
-						GROUP BY CATEGORY )
+					SELECT *,
+					RANK() OVER( PARTITION BY CATEGORY ORDER BY AMOUNT DESC) AS MAX,						
+					RANK() OVER( PARTITION BY CATEGORY ORDER BY AMOUNT) AS MIN						
+					FROM CUSTOMER_ALL
+				)
 
-	SELECT C.* 
-	FROM CUSTOMER_ALL C
-	JOIN AMOUNT A
-	ON C.CATEGORY = A.CATEGORY
-	WHERE C.AMOUNT NOT IN (A.MIN,A.MAX); 
+	SELECT * 
+	FROM  AMOUNT 
+	WHERE MAX<>1 AND MIN<>1; 
 
 --17. Display category-wise difference between highest and lowest amount.
 	WITH AMOUNT_DIFF AS (
