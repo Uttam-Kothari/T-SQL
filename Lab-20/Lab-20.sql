@@ -101,20 +101,11 @@
 --13. Display students having same ranking.
 	SELECT *
 	FROM (
-			SELECT * , 
-			DENSE_RANK()
-			OVER (ORDER BY SPI DESC) AS DE
-			FROM STUDENT
-		) AS T   
-	WHERE DE IN (
-				SELECT DE
-				FROM (
-						SELECT DENSE_RANK() OVER (ORDER BY SPI DESC) AS DE
-						FROM STUDENT
-					) AS R
-				GROUP BY DE
-				HAVING COUNT(DE) > 1
-				);
+			SELECT *,
+			COUNT(*)
+			OVER (PARTITION BY SPI ) AS DIFF
+			FROM STUDENT) AS T
+	WHERE DIFF >= 2;
 
 --14. Display SNAME, Previous SPI, Current SPI and Next SPI based on ascending order of SPI. 
 	SELECT SNAME,
